@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SyntaxSavvy Bank Web</title>
+    <style>
+        :root {
+            --bg: #121212; --card: #1e1e1e; --cyan: #00bcd4;
+            --green: #27ae60; --red: #c0392b; --yellow: #f1c40f;
+        }
+        body { background: var(--bg); color: #e0e0e0; font-family: 'Courier New', monospace; display: flex; justify-content: center; padding: 20px; }
+        .container { width: 100%; max-width: 700px; text-align: center; }
+        .card { background: var(--card); padding: 25px; border-radius: 12px; border: 1px solid #333; margin-top: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .hidden { display: none; }
+        
+        /* Typography & Colors */
+        h1, h2 { margin-top: 0; }
+        .cyan { color: var(--cyan); } .yellow { color: var(--yellow); } .green { color: var(--green); } .red-text { color: var(--red); }
+        
+        /* UI Elements */
+        button { background: var(--green); color: white; border: none; padding: 12px; margin: 8px; cursor: pointer; width: 220px; border-radius: 5px; font-weight: bold; transition: 0.3s; }
+        button:hover { filter: brightness(1.2); }
+        .btn-red { background: var(--red); }
+        input { display: block; width: 80%; margin: 15px auto; padding: 12px; background: #2a2a2a; color: white; border: 1px solid #444; border-radius: 4px; }
+        
+        .output-box { background: #000; padding: 15px; border: 1px solid var(--cyan); margin-top: 15px; text-align: left; max-height: 300px; overflow-y: auto; white-space: pre-wrap; font-size: 0.9em; }
+        hr { border: 0; border-top: 1px solid #333; margin: 20px 0; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1 class="yellow">===== Bank System =====</h1>
+
+    <div id="view-login-choice" class="card">
+        <h3>Select Login Mode</h3>
+        <button onclick="switchView('view-admin-login')">1. Admin Login</button><br>
+        <button onclick="switchView('view-user-login')">2. User Login</button>
+    </div>
+
+    <div id="view-admin-login" class="card hidden">
+        <h2 class="cyan">--- Admin Login ---</h2>
+        <input type="text" id="admin-user" placeholder="Username (syntaxsavvy)">
+        <input type="password" id="admin-pass" placeholder="Password (1234)">
+        <button onclick="adminVerify()">Login</button>
+        <button class="btn-red" onclick="goHome()">Back</button>
+    </div>
+
+    <div id="view-user-login" class="card hidden">
+        <h2 class="cyan">--- User Login ---</h2>
+        <input type="number" id="user-acc-input" placeholder="Account Number">
+        <input type="password" id="user-pass-input" placeholder="Password">
+        <button onclick="userVerify()">Login</button>
+        <button class="btn-red" onclick="goHome()">Back</button>
+    </div>
+
+    <div id="view-admin-dash" class="card hidden">
+        <h2 class="cyan">======= Admin Menu =======</h2>
+        <button onclick="createAccount()">1. Create Account</button>
+        <button onclick="showAllAccounts()">2. Show All Accounts</button>
+        <button onclick="deleteAccountUI()">3. Delete Account</button>
+        <button class="btn-red" onclick="goHome()">0. Logout</button>
+        <div id="admin-out" class="output-box">Ready...</div>
+    </div>
+
+    <div id="view-user-dash" class="card hidden">
+        <h2 class="cyan">======= User Menu =======</h2>
+        <p id="user-welcome" class="yellow"></p>
+        <h3 id="display-balance">Balance: 0.00 BDT</h3>
+        <div style="display: flex; flex-wrap: wrap; justify-content: center;">
+            <button onclick="depositMoney()">1. Deposit</button>
+            <button onclick="withdrawMoney()">2. Withdraw</button>
+            <button onclick="transferMoney()">3. Transfer</button>
+            <button onclick="showHistory()">4. History</button>
+        </div>
+        <button class="btn-red" onclick="goHome()">0. Logout</button>
+        <div id="user-out" class="output-box">Transaction details will appear here...</div>
+    </div>
+</div>
+
+<script>
+    // --- APP DATA (MOCKING FILE STORAGE) ---
+    let accounts = JSON.parse(localStorage.getItem('bank_db')) || [];
+    let nextAccNo = parseInt(localStorage.getItem('next_acc_no')) || 10001;
+    let currentUser = null;
+
+    function saveToLocal() {
+        localStorage.setItem('bank_db', JSON.stringify(accounts));
+        localStorage.setItem('next_acc_no', nextAccNo);
+    }
+
+    // --- NAVIGATION ---
+    function switchView(viewId) {
+        document.querySelectorAll('.card').forEach(v => v.classList.add('hidden'));
+        document.getElementById(viewId).classList.remove('hidden');
+    }
+
+    function goHome() {
+        currentUser = null;
+        switchView('view-login-choice');
+    }
+
+    // --- ADMIN LOGIC ---
+    function adminVerify() {
+        const u = document.getElementById('admin-user').value;
+        const p = document.getElementById('admin-pass').value;
+        if(u === "syntaxsavvy" && p === "1234") {
+            switchView('view-admin-dash');
+        } else { alert("Invalid Admin Credentials!"); }
+    }
+
+    function createAccount() {
+        const name = prompt("Enter Name:");
+        const pass = prompt("Set Password:");
+        if(!name || !pass) return;
+
+        let acc = {
+            no: nextAccNo++,
+            name: name,
+            pass: pass,
+            bal: 0,
+            txs: []
+        };
+        accounts.push(acc);
+        saveToLocal();
+        alert(`Account Created!\nNumber: ${acc.no}`);
+    }
+
+    function showAllAccounts() {
+        let out = document.getElementById('admin-out');
+        if(accounts.length === 0) { out.innerHTML = "No accounts registered."; return; }
+        let list = "--- ALL ACCOUNTS ---\n";
+        accounts.forEach(a => {
+            list += `Acc: ${a.no} | Name: ${a.name} | Bal: ${a.bal.toFixed(2)} BDT\n`;
+        });
+        out.innerText = list;
+    }
+
+    function deleteAccountUI() {
+        let no = prompt("Enter Account Number to DELETE:");
+        let idx = accounts.findIndex(a => a.no == no);
+        if(idx === -1) { alert("Account not found!"); return; }
+        
+        if(confirm(`Delete account for ${accounts[idx].name}?`)) {
+            accounts.splice(idx, 1);
+            saveToLocal();
+            alert("Deleted successfully.");
+            showAllAccounts();
+        }
+    }
+
+    // --- USER LOGIC ---
+    function userVerify() {
+        let no = document.getElementById('user-acc-input').value;
+        let pw = document.getElementById('user-pass-input').value;
+        let acc = accounts.find(a => a.no == no && a.pass == pw);
+        
+        if(acc) {
+            currentUser = acc;
+            updateUserUI();
+            switchView('view-user-dash');
+        } else { alert("Invalid Account Number or Password!"); }
+    }
+
+    function updateUserUI() {
+        document.getElementById('user-welcome').innerText = `Welcome, ${currentUser.name}`;
+        document.getElementById('display-balance').innerText = `Balance: ${currentUser.bal.toFixed(2)} BDT`;
+    }
+
+    function addTx(user, type, amount) {
+        user.txs.push({
+            type: type,
+            amount: amount,
+            balAfter: user.bal,
+            time: new Date().toLocaleString()
+        });
+        saveToLocal();
+    }
+
+    function depositMoney() {
+        let amt = parseFloat(prompt("Enter Deposit Amount:"));
+        if(isNaN(amt) || amt <= 0) return;
+        currentUser.bal += amt;
+        addTx(currentUser, "Deposit", amt);
+        updateUserUI();
+        alert("Deposit Successful!");
+    }
+
+    function withdrawMoney() {
+        let amt = parseFloat(prompt("Enter Withdraw Amount:"));
+        if(isNaN(amt) || amt > currentUser.bal) { alert("Insufficient Balance!"); return; }
+        currentUser.bal -= amt;
+        addTx(currentUser, "Withdraw", amt);
+        updateUserUI();
+        alert("Withdraw Successful!");
+    }
+
+    function transferMoney() {
+        let targetNo = prompt("Enter Receiver Account Number:");
+        let target = accounts.find(a => a.no == targetNo);
+        if(!target) { alert("Receiver not found!"); return; }
+        if(target.no == currentUser.no) { alert("Cannot transfer to self!"); return; }
+
+        let amt = parseFloat(prompt(`Transfer to ${target.name}. Enter Amount:`));
+        if(isNaN(amt) || amt > currentUser.bal) { alert("Invalid amount or insufficient funds!"); return; }
+
+        currentUser.bal -= amt;
+        target.bal += amt;
+        
+        addTx(currentUser, "Sent to " + targetNo, amt);
+        addTx(target, "Received fr " + currentUser.no, amt);
+        
+        updateUserUI();
+        alert(`Sent ${amt} BDT to ${target.name}`);
+    }
+
+    function showHistory() {
+        let out = document.getElementById('user-out');
+        if(currentUser.txs.length === 0) { out.innerText = "No transactions yet."; return; }
+        let list = "--- TRANSACTION HISTORY ---\n";
+        currentUser.txs.forEach(t => {
+            list += `${t.type.padEnd(12)} | ${t.amount.toFixed(2)} | After: ${t.balAfter.toFixed(2)} | ${t.time}\n`;
+        });
+        out.innerText = list;
+    }
+</script>
+
+</body>
+</html>
